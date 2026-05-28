@@ -1,0 +1,72 @@
+import "dotenv/config";
+import cors from "cors";
+import express from "express";
+import helmet from "helmet";
+import morgan from "morgan";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { connectDb } from "./config/db.js";
+import { adminRouter } from "./routes/admin.js";
+import { authRouter } from "./routes/auth.js";
+import { publicRouter } from "./routes/public.js";
+
+const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, "..");
+const origins = (process.env.CLIENT_ORIGIN || "").split(",").map((origin) => origin.trim()).filter(Boolean);
+const allowedOrigins = new Set(origins);
+
+function isAllowedOrigin(origin) {
+  if (!origin) {
+    return true;
+  }
+
+  if (allowedOrigins.has(origin)) {
+    return true;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    try {
+      const url = new URL(origin);
+      return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+app.use(helmet());
+app.use(
+  cors({
+    origin(origin, callback) {
+      callback(null, isAllowedOrigin(origin));
+    },
+  })
+);
+app.use(express.json({ limit: "1mb" }));
+app.use(morgan("dev"));
+
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.use("/api/auth", authRouter);
+app.use("/api/public", publicRouter);
+app.use("/api/admin", adminRouter);
+app.use("/uploads", express.static(path.join(projectRoot, "uploads")));
+
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  res.status(err.status || 500).json({ message: err.message || "Server error" });
+});
+
+const port = Number(process.env.PORT || 6031);
+
+await connectDb();
+
+app.listen(port, () => {
+  console.log(`API listening on http://localhost:${port}`);
+});

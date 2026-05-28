@@ -1,0 +1,14 @@
+
+> hbat-nathri-backend@1.0.0 dev
+> node --watch src/server.js
+
+MongoDB connected
+API listening on http://localhost:6031
+[0mPOST /api/auth/login [32m200[0m 302.235 ms - 304[0m
+[0mGET /api/admin/settings [32m200[0m 129.945 ms - 625[0m
+[0mGET /api/admin/categories [32m200[0m 130.335 ms - 380[0m
+[0mGET /api/admin/items [32m200[0m 132.584 ms - 2[0m
+[0mPOST /api/auth/login [32m200[0m 348.283 ms - 304[0m
+[0mGET /api/admin/settings [32m200[0m 9.690 ms - 625[0m
+[0mGET /api/admin/categories [36m304[0m 11.400 ms - -[0m
+[0mGET /api/admin/items [36m304[0m 13.219 ms - -[0m
