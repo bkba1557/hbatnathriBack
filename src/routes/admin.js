@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import express from "express";
-import { getStorageBucket } from "../config/firebase.js";
+import { getStorageBucket, hasFirebaseStorageConfig } from "../config/firebase.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { imageUpload } from "../middleware/upload.js";
 import { Category } from "../models/Category.js";
@@ -14,13 +14,6 @@ export const adminRouter = express.Router();
 adminRouter.use(requireAdmin);
 
 const uploadsRoot = path.resolve(process.cwd(), "uploads");
-
-function hasFirebaseUploadConfig() {
-  return Boolean(
-    process.env.FIREBASE_STORAGE_BUCKET &&
-      (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64 || process.env.GOOGLE_APPLICATION_CREDENTIALS)
-  );
-}
 
 async function getSettings() {
   return Settings.findOneAndUpdate(
@@ -113,7 +106,11 @@ adminRouter.post("/upload", imageUpload.single("image"), async (req, res) => {
   const extension = req.file.originalname.includes(".") ? req.file.originalname.split(".").pop().toLowerCase() : "jpg";
   const fileName = `menu/${Date.now()}-${crypto.randomBytes(8).toString("hex")}.${extension}`;
 
-  if (!hasFirebaseUploadConfig()) {
+  if (!hasFirebaseStorageConfig()) {
+    if (process.env.LOCAL_UPLOADS !== "true") {
+      return res.status(500).json({ message: "Firebase Storage is not configured for image uploads" });
+    }
+
     const destination = path.join(uploadsRoot, fileName);
     await fs.mkdir(path.dirname(destination), { recursive: true });
     await fs.writeFile(destination, req.file.buffer);
@@ -123,18 +120,20 @@ adminRouter.post("/upload", imageUpload.single("image"), async (req, res) => {
 
   const bucket = getStorageBucket();
   const file = bucket.file(fileName);
+  const downloadToken = crypto.randomUUID();
 
   await file.save(req.file.buffer, {
     metadata: {
       contentType: req.file.mimetype,
       cacheControl: "public, max-age=31536000",
+      metadata: {
+        firebaseStorageDownloadTokens: downloadToken,
+      },
     },
   });
 
-  const [url] = await file.getSignedUrl({
-    action: "read",
-    expires: "01-01-2500",
-  });
+  const encodedPath = encodeURIComponent(fileName);
+  const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
 
   return res.status(201).json({ url, path: fileName, storage: "firebase" });
 });
