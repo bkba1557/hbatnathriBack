@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import express from "express";
-import { getStorageBucket, hasFirebaseStorageConfig } from "../config/firebase.js";
+import { getFirebaseConfigStatus, getStorageBucket, hasFirebaseStorageConfig } from "../config/firebase.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { imageUpload } from "../middleware/upload.js";
 import { Category } from "../models/Category.js";
@@ -76,6 +76,14 @@ adminRouter.delete("/categories/:id", async (req, res) => {
 
 adminRouter.get("/items", async (_req, res) => {
   res.json(await Item.find().populate("category").sort({ sortOrder: 1, createdAt: 1 }));
+});
+
+adminRouter.get("/upload-config", (_req, res) => {
+  res.json({
+    provider: hasFirebaseStorageConfig() ? "firebase" : "local",
+    localUploadsEnabled: process.env.LOCAL_UPLOADS === "true",
+    firebase: getFirebaseConfigStatus(),
+  });
 });
 
 adminRouter.post("/items", async (req, res) => {
