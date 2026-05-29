@@ -14,7 +14,8 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
-const origins = (process.env.CLIENT_ORIGIN || "").split(",").map((origin) => origin.trim()).filter(Boolean);
+const normalizeOrigin = (origin) => origin.trim().replace(/\/+$/, "");
+const origins = (process.env.CLIENT_ORIGIN || "").split(",").map(normalizeOrigin).filter(Boolean);
 const allowedOrigins = new Set(origins);
 
 function isAllowedOrigin(origin) {
@@ -22,7 +23,7 @@ function isAllowedOrigin(origin) {
     return true;
   }
 
-  if (allowedOrigins.has(origin)) {
+  if (allowedOrigins.has(normalizeOrigin(origin))) {
     return true;
   }
 
