@@ -115,8 +115,13 @@ adminRouter.post("/upload", imageUpload.single("image"), async (req, res) => {
   const fileName = `menu/${Date.now()}-${crypto.randomBytes(8).toString("hex")}.${extension}`;
 
   if (!hasFirebaseStorageConfig()) {
-    if (process.env.LOCAL_UPLOADS !== "true") {
-      return res.status(500).json({ message: "Firebase Storage is not configured for image uploads" });
+    const allowLocalUploads = process.env.LOCAL_UPLOADS === "true" && process.env.NODE_ENV !== "production";
+
+    if (!allowLocalUploads) {
+      return res.status(500).json({
+        message: "Firebase Storage is not configured for image uploads",
+        firebase: getFirebaseConfigStatus(),
+      });
     }
 
     const destination = path.join(uploadsRoot, fileName);

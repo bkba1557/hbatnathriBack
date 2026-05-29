@@ -73,6 +73,22 @@ Use `service-account.example.json` only as a shape reference. Never commit the r
 
 Set `LOCAL_UPLOADS=false` on hosted environments so image upload fails clearly if Firebase is not configured.
 
+## Render Firebase Uploads
+
+On Render, do not rely on `service-account.json`; it is ignored by git and will not be deployed. Add these environment variables to the backend service:
+
+```env
+FIREBASE_STORAGE_BUCKET=albuhairaalarabia2026.firebasestorage.app
+FIREBASE_SERVICE_ACCOUNT_BASE64=<base64 of service-account.json>
+LOCAL_UPLOADS=false
+```
+
+Generate the base64 value locally from the backend folder:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("service-account.json"))
+```
+
 ## Main Routes
 
 - `GET /api/public/site-data`
