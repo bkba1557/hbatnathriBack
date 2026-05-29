@@ -135,15 +135,31 @@ adminRouter.post("/upload", imageUpload.single("image"), async (req, res) => {
   const file = bucket.file(fileName);
   const downloadToken = crypto.randomUUID();
 
-  await file.save(req.file.buffer, {
-    metadata: {
-      contentType: req.file.mimetype,
-      cacheControl: "public, max-age=31536000",
+  try {
+    await file.save(req.file.buffer, {
       metadata: {
-        firebaseStorageDownloadTokens: downloadToken,
+        contentType: req.file.mimetype,
+        cacheControl: "public, max-age=31536000",
+        metadata: {
+          firebaseStorageDownloadTokens: downloadToken,
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    console.error("Firebase Storage upload failed", {
+      bucket: bucket.name,
+      code: error.code,
+      message: error.message,
+    });
+
+    return res.status(500).json({
+      message: "Firebase Storage upload failed",
+      details: error.message,
+      code: error.code,
+      bucket: bucket.name,
+      firebase: getFirebaseUploadStatus(),
+    });
+  }
 
   const encodedPath = encodeURIComponent(fileName);
   const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
