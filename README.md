@@ -63,7 +63,13 @@ FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...@your-project-id.iam.gserviceaccount.
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
-For local development, you can also place the downloaded Firebase service account at `service-account.json` and set:
+For local development, you can also point to a downloaded Firebase service account:
+
+```env
+FIREBASE_SERVICE_ACCOUNT_PATH=C:\path\to\service-account.json
+```
+
+or place it at `service-account.json` and set:
 
 ```env
 GOOGLE_APPLICATION_CREDENTIALS=./service-account.json

@@ -6,8 +6,17 @@ const credentialSources = {
   base64: "FIREBASE_SERVICE_ACCOUNT_BASE64",
   json: "FIREBASE_SERVICE_ACCOUNT_JSON",
   envParts: "FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY",
+  serviceAccountPath: "FIREBASE_SERVICE_ACCOUNT_PATH",
   file: "GOOGLE_APPLICATION_CREDENTIALS",
 };
+
+function resolveServiceAccountPath(inputPath) {
+  if (!inputPath) {
+    return "";
+  }
+
+  return path.isAbsolute(inputPath) ? inputPath : path.resolve(inputPath);
+}
 
 function normalizeServiceAccount(serviceAccount) {
   if (serviceAccount?.private_key) {
@@ -36,15 +45,15 @@ function serviceAccountFromEnvParts() {
 }
 
 export function getFirebaseConfigStatus() {
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
-    ? path.resolve(process.env.GOOGLE_APPLICATION_CREDENTIALS)
-    : "";
+  const serviceAccountPath = resolveServiceAccountPath(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+  const credentialsPath = resolveServiceAccountPath(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
   return {
     storageBucket: Boolean(process.env.FIREBASE_STORAGE_BUCKET),
     serviceAccountBase64: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64),
     serviceAccountJson: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON),
     serviceAccountEnvParts: Boolean(serviceAccountFromEnvParts()),
+    serviceAccountPath: Boolean(serviceAccountPath && fs.existsSync(serviceAccountPath)),
     credentialsFile: Boolean(credentialsPath && fs.existsSync(credentialsPath)),
   };
 }
@@ -57,6 +66,7 @@ export function hasFirebaseStorageConfig() {
       (status.serviceAccountBase64 ||
         status.serviceAccountJson ||
         status.serviceAccountEnvParts ||
+        status.serviceAccountPath ||
         status.credentialsFile)
   );
 }
@@ -76,10 +86,12 @@ function getCredential() {
     return admin.credential.cert(envPartsAccount);
   }
 
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
-    ? path.resolve(process.env.GOOGLE_APPLICATION_CREDENTIALS)
-    : "";
+  const serviceAccountPath = resolveServiceAccountPath(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+  if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+    return admin.credential.cert(serviceAccountPath);
+  }
 
+  const credentialsPath = resolveServiceAccountPath(process.env.GOOGLE_APPLICATION_CREDENTIALS);
   if (!credentialsPath || !fs.existsSync(credentialsPath)) {
     throw new Error(
       `Firebase credentials are missing. Configure one of: ${Object.values(credentialSources).join(", ")}`
