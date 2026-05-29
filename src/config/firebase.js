@@ -44,6 +44,17 @@ function serviceAccountFromEnvParts() {
   });
 }
 
+function getCredentialSource() {
+  const status = getFirebaseConfigStatus();
+
+  if (status.serviceAccountBase64) return credentialSources.base64;
+  if (status.serviceAccountJson) return credentialSources.json;
+  if (status.serviceAccountEnvParts) return credentialSources.envParts;
+  if (status.serviceAccountPath) return credentialSources.serviceAccountPath;
+  if (status.credentialsFile) return credentialSources.file;
+  return "";
+}
+
 export function getFirebaseConfigStatus() {
   const serviceAccountPath = resolveServiceAccountPath(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
   const credentialsPath = resolveServiceAccountPath(process.env.GOOGLE_APPLICATION_CREDENTIALS);
@@ -55,6 +66,16 @@ export function getFirebaseConfigStatus() {
     serviceAccountEnvParts: Boolean(serviceAccountFromEnvParts()),
     serviceAccountPath: Boolean(serviceAccountPath && fs.existsSync(serviceAccountPath)),
     credentialsFile: Boolean(credentialsPath && fs.existsSync(credentialsPath)),
+  };
+}
+
+export function getFirebaseUploadStatus() {
+  const status = getFirebaseConfigStatus();
+
+  return {
+    ready: hasFirebaseStorageConfig(),
+    credentialSource: getCredentialSource(),
+    ...status,
   };
 }
 

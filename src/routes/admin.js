@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import express from "express";
-import { getFirebaseConfigStatus, getStorageBucket, hasFirebaseStorageConfig } from "../config/firebase.js";
+import { getFirebaseUploadStatus, getStorageBucket, hasFirebaseStorageConfig } from "../config/firebase.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { imageUpload } from "../middleware/upload.js";
 import { Category } from "../models/Category.js";
@@ -82,7 +82,7 @@ adminRouter.get("/upload-config", (_req, res) => {
   res.json({
     provider: hasFirebaseStorageConfig() ? "firebase" : "local",
     localUploadsEnabled: process.env.LOCAL_UPLOADS === "true",
-    firebase: getFirebaseConfigStatus(),
+    firebase: getFirebaseUploadStatus(),
   });
 });
 
@@ -120,7 +120,7 @@ adminRouter.post("/upload", imageUpload.single("image"), async (req, res) => {
     if (!allowLocalUploads) {
       return res.status(500).json({
         message: "Firebase Storage is not configured for image uploads",
-        firebase: getFirebaseConfigStatus(),
+        firebase: getFirebaseUploadStatus(),
       });
     }
 
