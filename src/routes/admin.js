@@ -128,7 +128,16 @@ adminRouter.post("/upload", imageUpload.single("image"), async (req, res) => {
     await fs.mkdir(path.dirname(destination), { recursive: true });
     await fs.writeFile(destination, req.file.buffer);
 
-    return res.status(201).json({ url: `/uploads/${fileName}`, path: fileName, storage: "local" });
+    const url = `/uploads/${fileName}`;
+
+    if (req.body.itemId) {
+      const item = await Item.findByIdAndUpdate(req.body.itemId, { imageUrl: url }, { new: true, runValidators: true });
+      if (!item) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+    }
+
+    return res.status(201).json({ url, path: fileName, storage: "local" });
   }
 
   const bucket = getStorageBucket();
@@ -163,6 +172,13 @@ adminRouter.post("/upload", imageUpload.single("image"), async (req, res) => {
 
   const encodedPath = encodeURIComponent(fileName);
   const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
+
+  if (req.body.itemId) {
+    const item = await Item.findByIdAndUpdate(req.body.itemId, { imageUrl: url }, { new: true, runValidators: true });
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+  }
 
   return res.status(201).json({ url, path: fileName, storage: "firebase" });
 });
