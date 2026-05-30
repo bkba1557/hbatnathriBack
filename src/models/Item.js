@@ -7,6 +7,7 @@ const itemSchema = new mongoose.Schema(
     price: { type: Number, default: 0, min: 0 },
     halfPrice: { type: Number, default: null, min: 0 },
     piecePrice: { type: Number, default: null, min: 0 },
+    calories: { type: Number, default: null, min: 0 },
     imageUrl: { type: String, trim: true, default: "" },
     category: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true },
     sortOrder: { type: Number, default: 0 },
