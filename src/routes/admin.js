@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import express from "express";
-import { getFirebaseUploadStatus, getStorageBucket, hasFirebaseStorageConfig } from "../config/firebase.js";
+import { getUploadsRoot } from "../config/uploads.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { imageUpload } from "../middleware/upload.js";
 import { Category } from "../models/Category.js";
@@ -13,7 +13,7 @@ export const adminRouter = express.Router();
 
 adminRouter.use(requireAdmin);
 
-const uploadsRoot = path.resolve(process.cwd(), "uploads");
+const uploadsRoot = getUploadsRoot();
 
 async function getSettings() {
   return Settings.findOneAndUpdate(
@@ -80,9 +80,8 @@ adminRouter.get("/items", async (_req, res) => {
 
 adminRouter.get("/upload-config", (_req, res) => {
   res.json({
-    provider: hasFirebaseStorageConfig() ? "firebase" : "local",
-    localUploadsEnabled: process.env.LOCAL_UPLOADS === "true",
-    firebase: getFirebaseUploadStatus(),
+    provider: "local",
+    uploadsPath: "/uploads",
   });
 });
 
@@ -111,67 +110,13 @@ adminRouter.post("/upload", imageUpload.single("image"), async (req, res) => {
     return res.status(400).json({ message: "Image is required" });
   }
 
-  const extension = req.file.originalname.includes(".") ? req.file.originalname.split(".").pop().toLowerCase() : "jpg";
+  const extension = path.extname(req.file.originalname).slice(1).toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
   const fileName = `menu/${Date.now()}-${crypto.randomBytes(8).toString("hex")}.${extension}`;
+  const destination = path.join(uploadsRoot, fileName);
+  await fs.mkdir(path.dirname(destination), { recursive: true });
+  await fs.writeFile(destination, req.file.buffer);
 
-  if (!hasFirebaseStorageConfig()) {
-    const allowLocalUploads = process.env.LOCAL_UPLOADS === "true" && process.env.NODE_ENV !== "production";
-
-    if (!allowLocalUploads) {
-      return res.status(500).json({
-        message: "Firebase Storage is not configured for image uploads",
-        firebase: getFirebaseUploadStatus(),
-      });
-    }
-
-    const destination = path.join(uploadsRoot, fileName);
-    await fs.mkdir(path.dirname(destination), { recursive: true });
-    await fs.writeFile(destination, req.file.buffer);
-
-    const url = `/uploads/${fileName}`;
-
-    if (req.body.itemId) {
-      const item = await Item.findByIdAndUpdate(req.body.itemId, { imageUrl: url }, { new: true, runValidators: true });
-      if (!item) {
-        return res.status(404).json({ message: "Item not found" });
-      }
-    }
-
-    return res.status(201).json({ url, path: fileName, storage: "local" });
-  }
-
-  const bucket = getStorageBucket();
-  const file = bucket.file(fileName);
-  const downloadToken = crypto.randomUUID();
-
-  try {
-    await file.save(req.file.buffer, {
-      metadata: {
-        contentType: req.file.mimetype,
-        cacheControl: "public, max-age=31536000",
-        metadata: {
-          firebaseStorageDownloadTokens: downloadToken,
-        },
-      },
-    });
-  } catch (error) {
-    console.error("Firebase Storage upload failed", {
-      bucket: bucket.name,
-      code: error.code,
-      message: error.message,
-    });
-
-    return res.status(500).json({
-      message: "Firebase Storage upload failed",
-      details: error.message,
-      code: error.code,
-      bucket: bucket.name,
-      firebase: getFirebaseUploadStatus(),
-    });
-  }
-
-  const encodedPath = encodeURIComponent(fileName);
-  const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
+  const url = `/uploads/${fileName}`;
 
   if (req.body.itemId) {
     const item = await Item.findByIdAndUpdate(req.body.itemId, { imageUrl: url }, { new: true, runValidators: true });
@@ -180,5 +125,5 @@ adminRouter.post("/upload", imageUpload.single("image"), async (req, res) => {
     }
   }
 
-  return res.status(201).json({ url, path: fileName, storage: "firebase" });
+  return res.status(201).json({ url, path: fileName, storage: "local" });
 });

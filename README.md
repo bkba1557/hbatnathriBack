@@ -1,11 +1,11 @@
 # Hbat Nathri Backend
 
-Express + MongoDB + Firebase Storage backend for menu/admin management.
+Express + MongoDB backend for menu/admin management.
 
 ## Setup
 
 1. Copy `.env.example` to `.env`.
-2. Set `MONGODB_URI`, `JWT_SECRET`, `ADMIN_SETUP_KEY`, and Firebase values.
+2. Set `MONGODB_URI`, `JWT_SECRET`, and `ADMIN_SETUP_KEY`.
 3. Install dependencies:
 
 ```bash
@@ -35,65 +35,21 @@ POST /api/auth/bootstrap
 npm run dev
 ```
 
-## Firebase Storage
+## Local Image Uploads
 
-Image uploads use Firebase Storage when these environment variables are present:
+Image uploads are stored on the backend server filesystem and served from:
+
+```http
+/uploads/<file-path>
+```
+
+By default files are written to `./uploads` from the backend project folder. To use a different folder on a hosted server, set:
 
 ```env
-FIREBASE_STORAGE_BUCKET=your-project-id.firebasestorage.app
+UPLOADS_DIR=/absolute/path/to/uploads
 ```
 
-Provide Firebase Admin credentials using one of these options:
-
-```env
-FIREBASE_SERVICE_ACCOUNT_BASE64=base64-service-account-json
-```
-
-or:
-
-```env
-FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
-```
-
-or split variables:
-
-```env
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...@your-project-id.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-```
-
-For local development, you can also point to a downloaded Firebase service account:
-
-```env
-FIREBASE_SERVICE_ACCOUNT_PATH=C:\path\to\service-account.json
-```
-
-or place it at `service-account.json` and set:
-
-```env
-GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
-```
-
-Use `service-account.example.json` only as a shape reference. Never commit the real `service-account.json`.
-
-Set `LOCAL_UPLOADS=false` on hosted environments so image upload fails clearly if Firebase is not configured.
-
-## Render Firebase Uploads
-
-On Render, do not rely on `service-account.json`; it is ignored by git and will not be deployed. Add these environment variables to the backend service:
-
-```env
-FIREBASE_STORAGE_BUCKET=albuhairaalarabia2026.firebasestorage.app
-FIREBASE_SERVICE_ACCOUNT_BASE64=<base64 of service-account.json>
-LOCAL_UPLOADS=false
-```
-
-Generate the base64 value locally from the backend folder:
-
-```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("service-account.json"))
-```
+Use a persistent disk or a folder that survives deployments/restarts in production. If the frontend is hosted on a different domain, keep `VITE_API_URL` pointed at the backend API so image URLs resolve correctly.
 
 ## Main Routes
 

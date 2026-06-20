@@ -3,17 +3,13 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { connectDb } from "./config/db.js";
+import { getUploadsRoot } from "./config/uploads.js";
 import { adminRouter } from "./routes/admin.js";
 import { authRouter } from "./routes/auth.js";
 import { publicRouter } from "./routes/public.js";
 
 const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, "..");
 const normalizeOrigin = (origin) => origin.trim().replace(/\/+$/, "");
 const origins = (process.env.CLIENT_ORIGIN || "").split(",").map(normalizeOrigin).filter(Boolean);
 const allowedOrigins = new Set(origins);
@@ -39,7 +35,7 @@ function isAllowedOrigin(origin) {
   return false;
 }
 
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
     origin(origin, callback) {
@@ -57,7 +53,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/public", publicRouter);
 app.use("/api/admin", adminRouter);
-app.use("/uploads", express.static(path.join(projectRoot, "uploads")));
+app.use("/uploads", express.static(getUploadsRoot()));
 
 app.use((err, _req, res, _next) => {
   console.error(err);
