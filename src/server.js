@@ -54,7 +54,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, uploadStorage: "local" });
+  res.json({ ok: true, uploadStorage: "local", uploadsRoot: getUploadsRoot() });
 });
 
 app.use("/api/auth", authRouter);

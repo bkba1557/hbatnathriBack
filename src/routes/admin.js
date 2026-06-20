@@ -113,8 +113,25 @@ adminRouter.post("/upload", imageUpload.single("image"), async (req, res) => {
   const extension = path.extname(req.file.originalname).slice(1).toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
   const fileName = `menu/${Date.now()}-${crypto.randomBytes(8).toString("hex")}.${extension}`;
   const destination = path.join(uploadsRoot, fileName);
-  await fs.mkdir(path.dirname(destination), { recursive: true });
-  await fs.writeFile(destination, req.file.buffer);
+
+  try {
+    await fs.mkdir(path.dirname(destination), { recursive: true });
+    await fs.writeFile(destination, req.file.buffer);
+  } catch (error) {
+    console.error("Local image upload failed", {
+      code: error.code,
+      message: error.message,
+      uploadsRoot,
+      destination,
+    });
+
+    return res.status(500).json({
+      message: "فشل حفظ الصورة على السيرفر",
+      details: error.message,
+      code: error.code,
+      storage: "local",
+    });
+  }
 
   const url = `/uploads/${fileName}`;
 
