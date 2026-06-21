@@ -29,3 +29,10 @@ export const imageUpload = multer({
     cb(null, true);
   },
 });
+
+export const chunkUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 700 * 1024,
+  },
+});
