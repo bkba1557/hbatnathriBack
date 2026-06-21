@@ -1,8 +1,4 @@
-import crypto from "node:crypto";
-import fs from "node:fs/promises";
-import path from "node:path";
 import express from "express";
-import { getUploadsRoot } from "../config/uploads.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { imageUpload } from "../middleware/upload.js";
 import { Category } from "../models/Category.js";
@@ -12,8 +8,6 @@ import { Settings } from "../models/Settings.js";
 export const adminRouter = express.Router();
 
 adminRouter.use(requireAdmin);
-
-const uploadsRoot = getUploadsRoot();
 
 async function getSettings() {
   return Settings.findOneAndUpdate(
@@ -110,29 +104,7 @@ adminRouter.post("/upload", imageUpload.single("image"), async (req, res) => {
     return res.status(400).json({ message: "Image is required" });
   }
 
-  const extension = path.extname(req.file.originalname).slice(1).toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-  const fileName = `menu/${Date.now()}-${crypto.randomBytes(8).toString("hex")}.${extension}`;
-  const destination = path.join(uploadsRoot, fileName);
-
-  try {
-    await fs.mkdir(path.dirname(destination), { recursive: true });
-    await fs.writeFile(destination, req.file.buffer);
-  } catch (error) {
-    console.error("Local image upload failed", {
-      code: error.code,
-      message: error.message,
-      uploadsRoot,
-      destination,
-    });
-
-    return res.status(500).json({
-      message: "فشل حفظ الصورة على السيرفر",
-      details: error.message,
-      code: error.code,
-      storage: "local",
-    });
-  }
-
+  const fileName = `menu/${req.file.filename}`;
   const url = `/uploads/${fileName}`;
 
   if (req.body.itemId) {

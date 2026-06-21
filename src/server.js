@@ -2,6 +2,7 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
+import multer from "multer";
 import morgan from "morgan";
 import { connectDb } from "./config/db.js";
 import { getUploadsRoot } from "./config/uploads.js";
@@ -64,6 +65,11 @@ app.use("/uploads", express.static(getUploadsRoot()));
 
 app.use((err, _req, res, _next) => {
   console.error(err);
+
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: err.message || "Upload failed" });
+  }
+
   res.status(err.status || 500).json({ message: err.message || "Server error" });
 });
 
